@@ -32,6 +32,7 @@ const run = async () => {
     // database
     const productCollection = client.db("anchor-auto").collection("products");
     const userCollection = client.db("anchor-auto").collection("users");
+    const blogCollection = client.db("anchor-auto").collection("blogs");
 
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
@@ -54,6 +55,12 @@ const run = async () => {
         expiresIn: "1d",
       });
       res.send({ result, token });
+    });
+
+    // get home page news and blogs from database
+    app.get("/news", async (req, res) => {
+      const result = await blogCollection.find().limit(3).toArray();
+      res.send(result);
     });
   } finally {
     // client.close()
