@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 const verifyJwt = (req, res, next) => {
-  const header = req.header.authorization;
+  const header = req.headers.authorization;
   if (!header) {
     return res.status(401).send({ message: "Unauthorized access" });
   }
@@ -21,7 +21,7 @@ const verifyJwt = (req, res, next) => {
       if (err) {
         return res.status(403).send({ message: "Forbidden access" });
       }
-      req.decode == decode;
+      req.decode = decode;
       next();
     });
   }
@@ -50,6 +50,7 @@ const run = async () => {
     const productCollection = client.db("anchor-auto").collection("products");
     const userCollection = client.db("anchor-auto").collection("users");
     const blogCollection = client.db("anchor-auto").collection("blogs");
+    const orderCollection = client.db("anchor-auto").collection("orders");
 
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
@@ -60,7 +61,6 @@ const run = async () => {
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
-      console.log(user);
       const filter = { email };
       const updatedData = {
         $set: user,
@@ -80,11 +80,28 @@ const run = async () => {
       res.send(result);
     });
 
-    app.get("/product/:id", async (req, res) => {
+    app.get("/product/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await productCollection.findOne(query);
       res.send(result);
+    });
+
+    // post order for order
+    app.post("/order/:email", verifyJwt, async (req, res) => {
+      const email = req.params.email;
+      const decodedEmail = req.decode.email;
+      const order = req.body;
+      if (email === decodedEmail) {
+        const result = await orderCollection.insertOne(order);
+        const successMessage = {
+          ...result,
+          message: "Your order successfully places,keep Patience for delivery",
+        };
+        res.send(successMessage);
+      } else {
+        res.status(403).send({ message: "forbidden access" });
+      }
     });
 
     // get home page news and blogs from database
