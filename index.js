@@ -3,6 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 var jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const stripe = require("stripe")(process.env.PAYMENT_API_KEY);
 const port = process.env.PORT || 5000;
 const app = express();
 
@@ -51,6 +52,9 @@ const run = async () => {
     const userCollection = client.db("anchor-auto").collection("users");
     const blogCollection = client.db("anchor-auto").collection("blogs");
     const orderCollection = client.db("anchor-auto").collection("orders");
+    const userInfoCollection = client
+      .db("anchor-auto")
+      .collection("use-information");
 
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decode.email;
@@ -63,6 +67,18 @@ const run = async () => {
         res.status(403).code({ message: "Forbidden Access" });
       }
     };
+    // make payment intent
+    app.post("/make-payment", verifyJwt, async (req, res) => {
+      const paymentInfo = req.body;
+      const price = paymentInfo.price;
+      const amount = price * 100;
+      const payment_Intent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
+      });
+      res.send({ clientSecret: payment_Intent.client_secret });
+    });
 
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
@@ -84,6 +100,18 @@ const run = async () => {
         expiresIn: "1d",
       });
       res.send({ result, token });
+    });
+    app.put("/userupdate/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      const user = req.body;
+      const filter = { _id: ObjectId(id) };
+      const updateData = {
+        $set: user,
+      };
+      const result = await userInfoCollection.updateOne(filter, updateData, {
+        upsert: true,
+      });
+      res.send(result);
     });
 
     // get products api
@@ -122,9 +150,17 @@ const run = async () => {
       const result = await orderCollection.find(filter).toArray();
       res.send(result);
     });
+    // get single order
+    app.get("/singleorderitem/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await orderCollection.findOne(filter);
+      res.send(result);
+    });
+
     // get admin and dashboard data
-    app.get("/admin/:email", verifyJwt, async (req, res) => {
-      const email = req.params.email;
+    app.get("/user/:email", verifyJwt, async (req, res) => {
+      const email = req.decode.email;
       const result = await userCollection.findOne({ email });
       res.send(result);
     });
