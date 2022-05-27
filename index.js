@@ -52,6 +52,8 @@ const run = async () => {
     const userCollection = client.db("anchor-auto").collection("users");
     const blogCollection = client.db("anchor-auto").collection("blogs");
     const orderCollection = client.db("anchor-auto").collection("orders");
+    const paymentCollection = client.db("anchor-auto").collection("payment");
+    const reviewCollection = client.db("anchor-auto").collection("reviews");
     const userInfoCollection = client
       .db("anchor-auto")
       .collection("use-information");
@@ -70,7 +72,7 @@ const run = async () => {
     // make payment intent
     app.post("/make-payment", verifyJwt, async (req, res) => {
       const paymentInfo = req.body;
-      const price = paymentInfo.price;
+      const price = paymentInfo.total;
       const amount = price * 100;
       const payment_Intent = await stripe.paymentIntents.create({
         amount: amount,
@@ -142,6 +144,20 @@ const run = async () => {
       } else {
         res.status(403).send({ message: "forbidden access" });
       }
+    });
+    // update product information
+    app.put("/order/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      const payment = req.body;
+      const filter = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: { paymentStatus: true },
+      };
+      const result = await orderCollection.updateOne(filter, updatedDoc, {
+        upsert: true,
+      });
+      const postPayment = await paymentCollection.insertOne(payment);
+      res.send(postPayment);
     });
     // get my orders
     app.get("/myorder/:email", verifyJwt, async (req, res) => {
