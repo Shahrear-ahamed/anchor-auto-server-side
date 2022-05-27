@@ -52,6 +52,18 @@ const run = async () => {
     const blogCollection = client.db("anchor-auto").collection("blogs");
     const orderCollection = client.db("anchor-auto").collection("orders");
 
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decode.email;
+      const requestedAccount = await userCollection.findOne({
+        email: decodedEmail,
+      });
+      if (requestedAccount.role === "admin") {
+        next();
+      } else {
+        res.status(403).code({ message: "Forbidden Access" });
+      }
+    };
+
     app.get("/products", async (req, res) => {
       const result = await productCollection.find().toArray();
       res.send(result);
@@ -102,6 +114,19 @@ const run = async () => {
       } else {
         res.status(403).send({ message: "forbidden access" });
       }
+    });
+    // get my orders
+    app.get("/myorder/:email", verifyJwt, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const result = await orderCollection.find(filter).toArray();
+      res.send(result);
+    });
+    // get admin and dashboard data
+    app.get("/admin/:email", verifyJwt, async (req, res) => {
+      const email = req.params.email;
+      const result = await userCollection.findOne({ email });
+      res.send(result);
     });
 
     // get home page news and blogs from database
