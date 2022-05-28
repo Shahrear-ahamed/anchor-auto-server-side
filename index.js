@@ -86,6 +86,24 @@ const run = async () => {
       const result = await productCollection.find().toArray();
       res.send(result);
     });
+    // make user by login
+    app.put("/createuser/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const user = req.body;
+      const updateUser = {
+        $set: {
+          ...user,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateUser, {
+        upsert: true,
+      });
+      const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      res.send({ result, token });
+    });
     // get user for make admin from database
     app.get("/user", verifyJwt, async (req, res) => {
       const result = await userCollection.find().toArray();
@@ -130,6 +148,7 @@ const run = async () => {
     app.get("/userupdate/:email", async (req, res) => {
       const email = req.params.email;
       const result = await userInfoCollection.findOne({ email });
+      console.log(result);
       res.send(result);
     });
     // make userupdate collection
@@ -165,7 +184,6 @@ const run = async () => {
         ...product,
       };
       const result = await productCollection.insertOne(doc);
-      console.log(result);
       res.send(result);
     });
     app.get("/product/:id", verifyJwt, async (req, res) => {
@@ -303,7 +321,6 @@ const run = async () => {
     app.post("/review", verifyJwt, async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
-      console.log(result);
       res.send(result);
     });
   } finally {
