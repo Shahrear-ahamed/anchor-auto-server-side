@@ -148,7 +148,6 @@ const run = async () => {
     app.get("/userupdate/:email", async (req, res) => {
       const email = req.params.email;
       const result = await userInfoCollection.findOne({ email });
-      console.log(result);
       res.send(result);
     });
     // make userupdate collection
@@ -158,6 +157,7 @@ const run = async () => {
       const filter = { email };
       const updatedData = {
         $set: {
+          email: user.email,
           address: user.address,
           education: user.education,
           linkedin: user.linkedin,
@@ -165,7 +165,7 @@ const run = async () => {
           phone: user.phone,
         },
       };
-      const result = await userInfoCollection.updateOne(filter, updatedData, {
+      const result = await userCollection.updateOne(filter, updatedData, {
         upsert: true,
       });
       res.send(result);
