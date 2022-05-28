@@ -86,6 +86,23 @@ const run = async () => {
       const result = await productCollection.find().toArray();
       res.send(result);
     });
+    // get user for make admin from database
+    app.get("/user", verifyJwt, async (req, res) => {
+      const result = await userCollection.find().toArray();
+      res.send(result);
+    });
+
+    app.put("/user/:email", verifyJwt, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const update = {
+        $set: { role: "admin" },
+      };
+      const result = await userCollection.updateOne(filter, update, {
+        upsert: true,
+      });
+      res.send(result);
+    });
 
     // make user collection
     app.patch("/user/:email", async (req, res) => {
@@ -122,7 +139,11 @@ const run = async () => {
       const filter = { email };
       const updatedData = {
         $set: {
-          ...user,
+          address: user.address,
+          education: user.education,
+          linkedin: user.linkedin,
+          name: user.name,
+          phone: user.phone,
         },
       };
       const result = await userInfoCollection.updateOne(filter, updatedData, {
@@ -137,13 +158,29 @@ const run = async () => {
       res.send(result);
     });
 
+    // upload product
+    app.post("/product", verifyJwt, verifyAdmin, async (req, res) => {
+      const product = req.body;
+      const doc = {
+        ...product,
+      };
+      const result = await productCollection.insertOne(doc);
+      console.log(result);
+      res.send(result);
+    });
     app.get("/product/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await productCollection.findOne(query);
       res.send(result);
     });
-   
+    // delete product
+    app.delete("/product/:id", verifyJwt, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productCollection.deleteOne(query);
+      res.send(result);
+    });
 
     // post order for order
     app.post("/order/:email", verifyJwt, async (req, res) => {
