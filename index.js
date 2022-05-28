@@ -86,14 +86,20 @@ const run = async () => {
       const result = await productCollection.find().toArray();
       res.send(result);
     });
-    // make user collection
 
-    app.put("/user/:email", async (req, res) => {
+    // make user collection
+    app.patch("/user/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
       const filter = { email };
       const updatedData = {
-        $set: user,
+        $set: {
+          address: user.address,
+          education: user.education,
+          linkedin: user.linkedin,
+          name: user.name,
+          phone: user.phone,
+        },
       };
       const result = await userCollection.updateOne(filter, updatedData, {
         upsert: true,
@@ -103,14 +109,23 @@ const run = async () => {
       });
       res.send({ result, token });
     });
-    app.put("/userupdate/:id", verifyJwt, async (req, res) => {
-      const id = req.params.id;
+    // get user update collection
+    app.get("/userupdate/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await userInfoCollection.findOne({ email });
+      res.send(result);
+    });
+    // make userupdate collection
+    app.put("/userupdate/:email", async (req, res) => {
+      const email = req.params.email;
       const user = req.body;
-      const filter = { _id: ObjectId(id) };
-      const updateData = {
-        $set: user,
+      const filter = { email };
+      const updatedData = {
+        $set: {
+          ...user,
+        },
       };
-      const result = await userInfoCollection.updateOne(filter, updateData, {
+      const result = await userInfoCollection.updateOne(filter, updatedData, {
         upsert: true,
       });
       res.send(result);
@@ -128,6 +143,7 @@ const run = async () => {
       const result = await productCollection.findOne(query);
       res.send(result);
     });
+   
 
     // post order for order
     app.post("/order/:email", verifyJwt, async (req, res) => {
@@ -159,6 +175,51 @@ const run = async () => {
       const postPayment = await paymentCollection.insertOne(payment);
       res.send(postPayment);
     });
+
+    //delete order by id
+    app.delete("/order/:id", verifyJwt, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const result = await orderCollection.deleteOne(filter);
+      res.send(result);
+    });
+
+    // get all order
+    app.get("/order", verifyJwt, async (req, res) => {
+      const result = await orderCollection.find().toArray();
+      res.send(result);
+    });
+
+    // update delivery by admin
+    app.put("/delivery/:id", verifyJwt, verifyAdmin, async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: ObjectId(id) };
+      const data = await orderCollection.findOne(filter);
+      const updateDoc = {
+        $set: { orderStatus: "Delivered" },
+      };
+      const result = await orderCollection.updateOne(filter, updateDoc, {
+        upsert: true,
+      });
+      const orderQuantity = parseInt(data.quantity);
+      const orderProduct = await productCollection.findOne({
+        _id: ObjectId(data.productId),
+      });
+      const productQuantity = orderProduct.quantity;
+      const latestQuantity = productQuantity - orderQuantity;
+      const updateQuantity = {
+        $set: { quantity: latestQuantity },
+      };
+      const newProduct = await productCollection.updateOne(
+        {
+          _id: ObjectId(data.productId),
+        },
+        updateQuantity,
+        { upsert: true }
+      );
+      res.send(result);
+    });
+
     // get my orders
     app.get("/myorder/:email", verifyJwt, async (req, res) => {
       const email = req.params.email;
@@ -166,6 +227,7 @@ const run = async () => {
       const result = await orderCollection.find(filter).toArray();
       res.send(result);
     });
+
     // get single order
     app.get("/singleorderitem/:id", verifyJwt, async (req, res) => {
       const id = req.params.id;
@@ -190,6 +252,21 @@ const run = async () => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await blogCollection.findOne(query);
+      res.send(result);
+    });
+
+    // get reviews
+    app.get("/review/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await reviewCollection.find({ email }).toArray();
+      res.send(result);
+    });
+
+    // set review
+    app.post("/review", verifyJwt, async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      console.log(result);
       res.send(result);
     });
   } finally {
