@@ -97,6 +97,24 @@ const run = async () => {
       res.send(result);
     });
 
+    // make user only login or not
+    app.put("/userlogin/:email", async (req, res) => {
+      const email = req.params.email;
+      const filter = { email };
+      const body = req.body;
+      const updatedUser = {
+        $set: {
+          ...body,
+        },
+      };
+      const result = await userCollection.updateOne(filter, updatedUser, {
+        upsert: true,
+      });
+      const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
+        expiresIn: "1d",
+      });
+      res.send({ result, token });
+    });
     // make user collection
     app.put("/userprofile/:email", async (req, res) => {
       const email = req.params.email;
@@ -117,16 +135,12 @@ const run = async () => {
         updatedData,
         options
       );
-      const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-        expiresIn: "1d",
-      });
-      res.send({ result, token });
+      res.send(result);
     });
     // get user update collection
     app.get("/userprofile/:email", async (req, res) => {
       const email = req.params.email;
       const result = await userCollection.findOne({ email });
-      console.log(result);
       res.send(result);
     });
 
