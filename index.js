@@ -54,9 +54,6 @@ const run = async () => {
     const orderCollection = client.db("anchor-auto").collection("orders");
     const paymentCollection = client.db("anchor-auto").collection("payment");
     const reviewCollection = client.db("anchor-auto").collection("reviews");
-    const userInfoCollection = client
-      .db("anchor-auto")
-      .collection("use-information");
 
     const verifyAdmin = async (req, res, next) => {
       const decodedEmail = req.decode.email;
@@ -82,28 +79,6 @@ const run = async () => {
       res.send({ clientSecret: payment_Intent.client_secret });
     });
 
-    app.get("/products", async (req, res) => {
-      const result = await productCollection.find().toArray();
-      res.send(result);
-    });
-    // make user by login
-    app.put("/createuser/:email", async (req, res) => {
-      const email = req.params.email;
-      const filter = { email };
-      const user = req.body;
-      const updateUser = {
-        $set: {
-          ...user,
-        },
-      };
-      const result = await userCollection.updateOne(filter, updateUser, {
-        upsert: true,
-      });
-      const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
-        expiresIn: "1d",
-      });
-      res.send({ result, token });
-    });
     // get user for make admin from database
     app.get("/user", verifyJwt, async (req, res) => {
       const result = await userCollection.find().toArray();
@@ -123,10 +98,11 @@ const run = async () => {
     });
 
     // make user collection
-    app.patch("/user/:email", async (req, res) => {
+    app.put("/userprofile/:email", async (req, res) => {
       const email = req.params.email;
       const user = req.body;
       const filter = { email };
+      const options = { upsert: true };
       const updatedData = {
         $set: {
           address: user.address,
@@ -136,38 +112,21 @@ const run = async () => {
           phone: user.phone,
         },
       };
-      const result = await userCollection.updateOne(filter, updatedData, {
-        upsert: true,
-      });
+      const result = await userCollection.updateOne(
+        filter,
+        updatedData,
+        options
+      );
       const token = jwt.sign({ email }, process.env.ACCESS_TOKEN, {
         expiresIn: "1d",
       });
       res.send({ result, token });
     });
     // get user update collection
-    app.get("/userupdate/:email", async (req, res) => {
+    app.get("/userprofile/:email", async (req, res) => {
       const email = req.params.email;
-      const result = await userInfoCollection.findOne({ email });
-      res.send(result);
-    });
-    // make userupdate collection
-    app.put("/userupdate/:email", async (req, res) => {
-      const email = req.params.email;
-      const user = req.body;
-      const filter = { email };
-      const updatedData = {
-        $set: {
-          email: user.email,
-          address: user.address,
-          education: user.education,
-          linkedin: user.linkedin,
-          name: user.name,
-          phone: user.phone,
-        },
-      };
-      const result = await userCollection.updateOne(filter, updatedData, {
-        upsert: true,
-      });
+      const result = await userCollection.findOne({ email });
+      console.log(result);
       res.send(result);
     });
 
@@ -177,6 +136,11 @@ const run = async () => {
       res.send(result);
     });
 
+    // get all product
+    app.get("/products", async (req, res) => {
+      const result = await productCollection.find().toArray();
+      res.send(result);
+    });
     // upload product
     app.post("/product", verifyJwt, verifyAdmin, async (req, res) => {
       const product = req.body;
@@ -295,6 +259,7 @@ const run = async () => {
     app.get("/user/:email", verifyJwt, async (req, res) => {
       const email = req.decode.email;
       const result = await userCollection.findOne({ email });
+      console.log(result);
       res.send(result);
     });
 
