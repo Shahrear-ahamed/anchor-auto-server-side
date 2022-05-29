@@ -259,7 +259,6 @@ const run = async () => {
     app.get("/user/:email", verifyJwt, async (req, res) => {
       const email = req.decode.email;
       const result = await userCollection.findOne({ email });
-      console.log(result);
       res.send(result);
     });
 
